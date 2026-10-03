@@ -5,18 +5,79 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 
 class SoundEffects {
     private val scope = CoroutineScope(Dispatchers.Default)
     var isSfxEnabled: Boolean = true
+
+    private var musicJob: Job? = null
     var isMusicEnabled: Boolean = true
+        set(value) {
+            field = value
+            if (value) {
+                startMusic()
+            } else {
+                stopMusic()
+            }
+        }
+
+    fun startMusic() {
+        if (!isMusicEnabled) return
+        if (musicJob?.isActive == true) return
+
+        musicJob = scope.launch {
+            // Melodic cheerful video game loop (C - G - Am - F progression with upbeat arpeggios)
+            val melodyNotes = listOf(
+                Pair(523.25f, 180), // C5
+                Pair(659.25f, 180), // E5
+                Pair(783.99f, 180), // G5
+                Pair(1046.50f, 180),// C6
+
+                Pair(392.00f, 180), // G4
+                Pair(493.88f, 180), // B4
+                Pair(587.33f, 180), // D5
+                Pair(783.99f, 180), // G5
+
+                Pair(440.00f, 180), // A4
+                Pair(523.25f, 180), // C5
+                Pair(659.25f, 180), // E5
+                Pair(880.00f, 180), // A5
+
+                Pair(349.23f, 180), // F4
+                Pair(440.00f, 180), // A4
+                Pair(523.25f, 180), // C5
+                Pair(698.46f, 180)  // F5
+            )
+
+            while (isActive && isMusicEnabled) {
+                for (note in melodyNotes) {
+                    if (!isActive || !isMusicEnabled) break
+                    generateTone(
+                        freq = note.first,
+                        durationMs = note.second,
+                        volume = 0.22f, // pleasant background ambient level
+                        isMusic = true
+                    )
+                    delay((note.second * 1.05f).toLong())
+                }
+                delay(300) // Brief bar rest between phrase loops
+            }
+        }
+    }
+
+    fun stopMusic() {
+        musicJob?.cancel()
+        musicJob = null
+    }
 
     fun playPop() {
         if (!isSfxEnabled) return
         scope.launch {
-            // High snappy chirp/pop from 600Hz to 1200Hz in 60ms
             generateChirp(startFreq = 500f, endFreq = 1100f, durationMs = 65, volume = 0.85f)
         }
     }
@@ -24,7 +85,6 @@ class SoundEffects {
     fun playLaunch() {
         if (!isSfxEnabled) return
         scope.launch {
-            // Whoosh sweep
             generateChirp(startFreq = 220f, endFreq = 440f, durationMs = 80, volume = 0.5f)
         }
     }
@@ -32,7 +92,6 @@ class SoundEffects {
     fun playBomb() {
         if (!isSfxEnabled) return
         scope.launch {
-            // Deep low rumble explosion
             generateNoiseBurst(durationMs = 220, baseFreq = 85f, volume = 0.95f)
         }
     }
@@ -40,7 +99,6 @@ class SoundEffects {
     fun playRainbow() {
         if (!isSfxEnabled) return
         scope.launch {
-            // Sparkling high arpeggio
             val notes = listOf(523.25f, 659.25f, 783.99f, 1046.50f)
             for (note in notes) {
                 generateTone(freq = note, durationMs = 45, volume = 0.6f)
@@ -82,7 +140,7 @@ class SoundEffects {
         }
     }
 
-    private fun generateTone(freq: Float, durationMs: Int, volume: Float) {
+    private fun generateTone(freq: Float, durationMs: Int, volume: Float, isMusic: Boolean = false) {
         val sampleRate = 22050
         val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
         if (numSamples <= 0) return
@@ -90,7 +148,12 @@ class SoundEffects {
 
         for (i in 0 until numSamples) {
             val time = i.toDouble() / sampleRate
-            val envelope = (1.0 - (i.toDouble() / numSamples)).toFloat() // linear decay
+            val envelope = if (isMusic) {
+                // Bell curve envelope for softer musical attack & decay
+                sin(Math.PI * i / numSamples).toFloat()
+            } else {
+                (1.0 - (i.toDouble() / numSamples)).toFloat()
+            }
             val wave = sin(2.0 * Math.PI * freq * time).toFloat()
             samples[i] = (wave * envelope * volume * Short.MAX_VALUE).toInt().toShort()
         }
@@ -154,9 +217,9 @@ class SoundEffects {
 
             audioTrack.write(samples, 0, samples.size)
             audioTrack.play()
-            // Clean up after playback
+
             scope.launch {
-                kotlinx.coroutines.delay((samples.size * 1000L / sampleRate) + 50)
+                delay((samples.size * 1000L / sampleRate) + 50)
                 try {
                     audioTrack.stop()
                     audioTrack.release()

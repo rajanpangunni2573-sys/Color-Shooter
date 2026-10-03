@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -42,10 +43,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 
 @Composable
 fun SettingsScreen(
@@ -60,14 +64,31 @@ fun SettingsScreen(
     var showConfirmDialog by remember { mutableStateOf(false) }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF0F172A))
-                )
-            )
+        modifier = modifier.fillMaxSize()
     ) {
+        // Candy Background Image
+        Image(
+            painter = painterResource(id = R.drawable.img_sweet_background),
+            contentDescription = "Settings Background",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Readability Scrim Overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xEE0B1020),
+                            Color(0xD910162F),
+                            Color(0xFA090D1A)
+                        )
+                    )
+                )
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -183,8 +204,8 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
-                                    Text("Music & Chimes", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
-                                    Text("Fanfare and ambient tones", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                                    Text("Background Music", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+                                    Text(if (musicEnabled) "Soundtrack active" else "Soundtrack muted", color = Color(0xFF94A3B8), fontSize = 12.sp)
                                 }
                             }
                             Switch(

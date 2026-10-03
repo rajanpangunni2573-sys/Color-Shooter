@@ -8,6 +8,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -42,12 +43,15 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.model.ScreenState
 
 @Composable
@@ -77,14 +81,31 @@ fun MainMenuScreen(
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0A0E1A), Color(0xFF161F38), Color(0xFF0F172A))
-                )
-            )
+        modifier = modifier.fillMaxSize()
     ) {
+        // Candy / Sweet Path Background Image
+        Image(
+            painter = painterResource(id = R.drawable.img_sweet_background),
+            contentDescription = "Background",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Contrast Scrim
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xDD0A0E1A),
+                            Color(0xC4161F38),
+                            Color(0xF00F172A)
+                        )
+                    )
+                )
+        )
+
         // Ambient background animated bubble floating orbs
         Canvas(modifier = Modifier.fillMaxSize()) {
             val orbs = listOf(

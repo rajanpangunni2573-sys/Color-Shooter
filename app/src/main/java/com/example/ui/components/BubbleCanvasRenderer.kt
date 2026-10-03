@@ -1,7 +1,8 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -36,23 +37,28 @@ fun BubbleCanvasRenderer(
             .onSizeChanged { size ->
                 onCanvasSizeChanged(size.width.toFloat(), size.height.toFloat())
             }
-            .pointerInput(uiState.status) {
-                if (uiState.status == GameStatus.READY || uiState.status == GameStatus.AIMING) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            onAimTouch(offset.x, offset.y, false)
-                        },
-                        onDrag = { change, _ ->
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var lastX = down.position.x
+                    var lastY = down.position.y
+
+                    onAimTouch(lastX, lastY, false)
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            // Finger released! Fire bubble towards the aimed position
+                            onAimTouch(lastX, lastY, true)
+                            break
+                        } else {
+                            lastX = change.position.x
+                            lastY = change.position.y
                             change.consume()
-                            onAimTouch(change.position.x, change.position.y, false)
-                        },
-                        onDragEnd = {
-                            onAimTouch(0f, 0f, true)
-                        },
-                        onDragCancel = {
-                            onAimTouch(0f, 0f, true)
+                            onAimTouch(lastX, lastY, false)
                         }
-                    )
+                    }
                 }
             }
     ) {

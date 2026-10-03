@@ -174,10 +174,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onLifecyclePause() {
+        soundEffects.stopMusic()
         if (_uiState.value.screen == ScreenState.GAMEPLAY &&
             (_uiState.value.status == GameStatus.READY || _uiState.value.status == GameStatus.AIMING)
         ) {
             _uiState.update { it.copy(status = GameStatus.PAUSED) }
+        }
+    }
+
+    fun onLifecycleResume() {
+        if (_uiState.value.musicEnabled) {
+            soundEffects.startMusic()
         }
     }
 
@@ -234,11 +241,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val dx = touchX - launcherPos.x
         val dy = touchY - launcherPos.y
 
-        // Disallow aiming straight down or backwards
-        if (dy >= -20f && !isRelease) return
+        // If user drags below the launcher, treat as cancel
+        if (dy >= -20f) {
+            if (isRelease) {
+                _uiState.update {
+                    it.copy(
+                        isAiming = false,
+                        status = GameStatus.READY,
+                        aimGuide = AimGuide()
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isAiming = false,
+                        aimGuide = AimGuide()
+                    )
+                }
+            }
+            return
+        }
 
         var angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
-        // Clamp angle between -165 and -15 degrees
+        // Clamp angle between -168 and -12 degrees (upwards trajectory)
         angle = angle.coerceIn(-168f, -12f)
 
         if (isRelease) {
@@ -405,88 +430,99 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun updateProjectile(proj: Projectile, dt: Float) {
-        var nx = proj.x + proj.vx * dt
-        var ny = proj.y + proj.vy * dt
-        var nvx = proj.vx
-        var nvy = proj.vy
+        val substeps = 4
+        val subDt = dt / substeps.toFloat()
+
+        var curX = proj.x
+        var curY = proj.y
+        var curVx = proj.vx
+        var curVy = proj.vy
 
         val leftBound = bubbleRadius
         val rightBound = canvasWidth - bubbleRadius
         val ceilingY = gridStartY + bubbleRadius
 
-        // Left/Right wall bounce
-        if (nx <= leftBound) {
-            nx = leftBound
-            nvx = -nvx
-            soundEffects.playLaunch()
-        } else if (nx >= rightBound) {
-            nx = rightBound
-            nvx = -nvx
-            soundEffects.playLaunch()
-        }
+        for (step in 0 until substeps) {
+            curX += curVx * subDt
+            curY += curVy * subDt
 
-        val testPos = Offset(nx, ny)
-        val state = _uiState.value
-        val baseCols = state.currentLevel?.baseCols ?: 8
+            // Wall bounce
+            if (curX <= leftBound) {
+                curX = leftBound
+                curVx = kotlin.math.abs(curVx)
+                soundEffects.playLaunch()
+            } else if (curX >= rightBound) {
+                curX = rightBound
+                curVx = -kotlin.math.abs(curVx)
+                soundEffects.playLaunch()
+            }
 
-        // Special handling for FIREBALL: pierces through bubbles
-        if (proj.bubble.powerUp == PowerUpType.FIREBALL) {
-            val hitCoords = mutableListOf<GridCoord>()
-            for ((coord, _) in state.grid) {
-                val center = HexGridMath.getBubbleCenter(coord.row, coord.col, bubbleRadius, gridStartX, gridStartY)
-                val dx = testPos.x - center.x
-                val dy = testPos.y - center.y
-                if (dx * dx + dy * dy <= (bubbleRadius * 2f) * (bubbleRadius * 2f)) {
-                    hitCoords.add(coord)
+            val testPos = Offset(curX, curY)
+            val state = _uiState.value
+
+            // Special handling for FIREBALL: pierces through bubbles
+            if (proj.bubble.powerUp == PowerUpType.FIREBALL) {
+                val hitCoords = mutableListOf<GridCoord>()
+                for ((coord, _) in state.grid) {
+                    val center = HexGridMath.getBubbleCenter(coord.row, coord.col, bubbleRadius, gridStartX, gridStartY)
+                    val dx = testPos.x - center.x
+                    val dy = testPos.y - center.y
+                    if (dx * dx + dy * dy <= (bubbleRadius * 2f) * (bubbleRadius * 2f)) {
+                        hitCoords.add(coord)
+                    }
+                }
+
+                if (hitCoords.isNotEmpty()) {
+                    val updatedGrid = state.grid.toMutableMap()
+                    for (coord in hitCoords) {
+                        updatedGrid.remove(coord)
+                        spawnBubblePopParticles(coord)
+                    }
+                    soundEffects.playBomb()
+                    val pts = hitCoords.size * 150
+                    spawnFloatingText("+$pts FIRE!", testPos.x, testPos.y)
+                    _uiState.update { it.copy(grid = updatedGrid, score = it.score + pts) }
+                }
+
+                if (curY <= ceilingY) {
+                    onProjectileFinished()
+                    return
+                }
+                continue
+            }
+
+            // Standard Bubble & Bomb & Rainbow Collision check
+            var collided = false
+            if (curY <= ceilingY) {
+                collided = true
+                curY = ceilingY
+            } else {
+                // Check collision with any bubble in grid
+                val thresholdSq = (bubbleRadius * 1.9f) * (bubbleRadius * 1.9f)
+                for ((coord, _) in state.grid) {
+                    val center = HexGridMath.getBubbleCenter(coord.row, coord.col, bubbleRadius, gridStartX, gridStartY)
+                    val dx = curX - center.x
+                    val dy = curY - center.y
+                    if (dx * dx + dy * dy <= thresholdSq) {
+                        collided = true
+                        break
+                    }
                 }
             }
 
-            if (hitCoords.isNotEmpty()) {
-                val updatedGrid = state.grid.toMutableMap()
-                for (coord in hitCoords) {
-                    updatedGrid.remove(coord)
-                    spawnBubblePopParticles(coord)
-                }
-                soundEffects.playBomb()
-                val pts = hitCoords.size * 150
-                spawnFloatingText("+$pts FIRE!", testPos.x, testPos.y)
-                _uiState.update { it.copy(grid = updatedGrid, score = it.score + pts) }
+            if (collided) {
+                handleCollision(Offset(curX, curY), proj.bubble)
+                return
             }
 
-            if (ny <= ceilingY) {
-                // Fireball finishes at ceiling
+            // Safety boundary check
+            if (curY > canvasHeight + 100f) {
                 onProjectileFinished()
                 return
-            } else {
-                _uiState.update { it.copy(activeProjectile = proj.copy(x = nx, y = ny, vx = nvx, vy = nvy)) }
-                return
             }
         }
 
-        // Standard Bubble & Bomb & Rainbow Collision check
-        var collided = false
-        if (ny <= ceilingY) {
-            collided = true
-            ny = ceilingY
-        } else {
-            // Check collision with any bubble in grid
-            val thresholdSq = (bubbleRadius * 1.9f) * (bubbleRadius * 1.9f)
-            for ((coord, _) in state.grid) {
-                val center = HexGridMath.getBubbleCenter(coord.row, coord.col, bubbleRadius, gridStartX, gridStartY)
-                val dx = nx - center.x
-                val dy = ny - center.y
-                if (dx * dx + dy * dy <= thresholdSq) {
-                    collided = true
-                    break
-                }
-            }
-        }
-
-        if (collided) {
-            handleCollision(Offset(nx, ny), proj.bubble)
-        } else {
-            _uiState.update { it.copy(activeProjectile = proj.copy(x = nx, y = ny, vx = nvx, vy = nvy)) }
-        }
+        _uiState.update { it.copy(activeProjectile = proj.copy(x = curX, y = curY, vx = curVx, vy = curVy)) }
     }
 
     private fun handleCollision(impactPos: Offset, bubble: Bubble) {
@@ -762,5 +798,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             preferencesRepository.clearAllData()
             soundEffects.playClick()
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        soundEffects.stopMusic()
     }
 }

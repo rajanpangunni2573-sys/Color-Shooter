@@ -33,6 +33,9 @@ fun BubbleShooterApp(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         viewModel.onLifecyclePause()
     }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onLifecycleResume()
+    }
 
     // System Back Handler
     BackHandler(enabled = true) {

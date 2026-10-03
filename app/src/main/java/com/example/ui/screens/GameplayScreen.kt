@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,10 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.model.GameStatus
 import com.example.model.GameUiState
 import com.example.model.PowerUpType
@@ -55,14 +59,31 @@ fun GameplayScreen(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0F172A), Color(0xFF1E1B4B), Color(0xFF0A0F1D))
-                )
-            )
+        modifier = modifier.fillMaxSize()
     ) {
+        // Candy Background Image
+        Image(
+            painter = painterResource(id = R.drawable.img_sweet_background),
+            contentDescription = "Gameplay Background",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Scrim for optimal bubble contrast & aiming visibility
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xEE0B1020),
+                            Color(0xD910162F),
+                            Color(0xF2090D1A)
+                        )
+                    )
+                )
+        )
+
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
