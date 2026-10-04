@@ -52,11 +52,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.model.BackgroundMode
 import com.example.model.ScreenState
+import com.example.ui.components.GameBackground
 
 @Composable
 fun MainMenuScreen(
     onNavigate: (ScreenState) -> Unit,
+    backgroundMode: BackgroundMode = BackgroundMode.SWEET_CANDY,
+    customPhotoPath: String? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -83,27 +87,11 @@ fun MainMenuScreen(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // Candy / Sweet Path Background Image
-        Image(
-            painter = painterResource(id = R.drawable.img_sweet_background),
-            contentDescription = "Background",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Contrast Scrim
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xDD0A0E1A),
-                            Color(0xC4161F38),
-                            Color(0xF00F172A)
-                        )
-                    )
-                )
+        // Dynamic Game Background
+        GameBackground(
+            backgroundMode = backgroundMode,
+            customPhotoPath = customPhotoPath,
+            scrimAlpha = 0.65f
         )
 
         // Ambient background animated bubble floating orbs
@@ -183,11 +171,11 @@ fun MainMenuScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Aim • Match 3 • Clear The Grid",
-                    fontSize = 14.sp,
-                    color = Color(0xFF94A3B8),
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp
+                    text = "1,000 Levels • Photo & Camera AR • Match 3",
+                    fontSize = 13.sp,
+                    color = Color(0xFF38BDF8),
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp
                 )
             }
 

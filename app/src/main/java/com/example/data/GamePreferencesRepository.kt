@@ -6,7 +6,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.model.BackgroundMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -17,6 +19,8 @@ class GamePreferencesRepository(private val context: Context) {
     private val KEY_UNLOCKED_LEVEL = intPreferencesKey("highest_unlocked_level")
     private val KEY_SFX_ENABLED = booleanPreferencesKey("sound_fx_enabled")
     private val KEY_MUSIC_ENABLED = booleanPreferencesKey("music_enabled")
+    private val KEY_BACKGROUND_MODE = stringPreferencesKey("background_mode")
+    private val KEY_CUSTOM_PHOTO_PATH = stringPreferencesKey("custom_photo_path")
 
     private fun highScoreKey(levelId: Int) = intPreferencesKey("level_${levelId}_high_score")
     private fun starsKey(levelId: Int) = intPreferencesKey("level_${levelId}_stars")
@@ -31,6 +35,19 @@ class GamePreferencesRepository(private val context: Context) {
 
     val musicEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_MUSIC_ENABLED] ?: true
+    }
+
+    val backgroundMode: Flow<BackgroundMode> = context.dataStore.data.map { preferences ->
+        val name = preferences[KEY_BACKGROUND_MODE] ?: BackgroundMode.SWEET_CANDY.name
+        try {
+            BackgroundMode.valueOf(name)
+        } catch (e: Exception) {
+            BackgroundMode.SWEET_CANDY
+        }
+    }
+
+    val customPhotoPath: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[KEY_CUSTOM_PHOTO_PATH]
     }
 
     fun getLevelHighScore(levelId: Int): Flow<Int> = context.dataStore.data.map { preferences ->
@@ -73,6 +90,22 @@ class GamePreferencesRepository(private val context: Context) {
     suspend fun setMusicEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[KEY_MUSIC_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setBackgroundMode(mode: BackgroundMode) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_BACKGROUND_MODE] = mode.name
+        }
+    }
+
+    suspend fun setCustomPhotoPath(path: String?) {
+        context.dataStore.edit { preferences ->
+            if (path != null) {
+                preferences[KEY_CUSTOM_PHOTO_PATH] = path
+            } else {
+                preferences.remove(KEY_CUSTOM_PHOTO_PATH)
+            }
         }
     }
 

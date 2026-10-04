@@ -9,6 +9,7 @@ import com.example.data.LevelRepository
 import com.example.game.HexGridMath
 import com.example.game.SoundEffects
 import com.example.model.AimGuide
+import com.example.model.BackgroundMode
 import com.example.model.Bubble
 import com.example.model.BubbleColor
 import com.example.model.FallingBubble
@@ -73,7 +74,34 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(highestLevelUnlocked = unlocked) }
             }
         }
+        viewModelScope.launch {
+            preferencesRepository.backgroundMode.collect { mode ->
+                _uiState.update { it.copy(backgroundMode = mode) }
+            }
+        }
+        viewModelScope.launch {
+            preferencesRepository.customPhotoPath.collect { path ->
+                _uiState.update { it.copy(customPhotoPath = path) }
+            }
+        }
         startGameLoop()
+    }
+
+    fun setBackgroundMode(mode: BackgroundMode) {
+        soundEffects.playClick()
+        viewModelScope.launch {
+            preferencesRepository.setBackgroundMode(mode)
+        }
+    }
+
+    fun setCustomPhoto(path: String?) {
+        soundEffects.playClick()
+        viewModelScope.launch {
+            preferencesRepository.setCustomPhotoPath(path)
+            if (path != null) {
+                preferencesRepository.setBackgroundMode(BackgroundMode.PHOTO)
+            }
+        }
     }
 
     fun setCanvasDimensions(width: Float, height: Float) {

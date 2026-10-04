@@ -89,5 +89,7 @@ data class GameUiState(
     val highestLevelUnlocked: Int = 1,
     val soundFxEnabled: Boolean = true,
     val musicEnabled: Boolean = true,
-    val dangerLineRow: Int = 11
+    val dangerLineRow: Int = 11,
+    val backgroundMode: BackgroundMode = BackgroundMode.SWEET_CANDY,
+    val customPhotoPath: String? = null
 )

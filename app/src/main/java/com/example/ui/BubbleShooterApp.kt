@@ -68,12 +68,16 @@ fun BubbleShooterApp(
         when (uiState.screen) {
             ScreenState.MAIN_MENU -> {
                 MainMenuScreen(
-                    onNavigate = { screen -> viewModel.navigateTo(screen) }
+                    onNavigate = { screen -> viewModel.navigateTo(screen) },
+                    backgroundMode = uiState.backgroundMode,
+                    customPhotoPath = uiState.customPhotoPath
                 )
             }
             ScreenState.LEVEL_SELECT -> {
                 LevelSelectScreen(
                     highestUnlockedLevel = uiState.highestLevelUnlocked,
+                    backgroundMode = uiState.backgroundMode,
+                    customPhotoPath = uiState.customPhotoPath,
                     onLevelSelected = { levelId -> viewModel.startLevel(levelId) },
                     onBack = { viewModel.navigateTo(ScreenState.MAIN_MENU) }
                 )
@@ -82,8 +86,12 @@ fun BubbleShooterApp(
                 SettingsScreen(
                     soundFxEnabled = uiState.soundFxEnabled,
                     musicEnabled = uiState.musicEnabled,
+                    backgroundMode = uiState.backgroundMode,
+                    customPhotoPath = uiState.customPhotoPath,
                     onSoundFxToggled = { enabled -> viewModel.setSoundFxEnabled(enabled) },
                     onMusicToggled = { enabled -> viewModel.setMusicEnabled(enabled) },
+                    onBackgroundModeChanged = { mode -> viewModel.setBackgroundMode(mode) },
+                    onCustomPhotoSelected = { path -> viewModel.setCustomPhoto(path) },
                     onClearData = { viewModel.clearAllData() },
                     onBack = { viewModel.navigateTo(ScreenState.MAIN_MENU) }
                 )
@@ -99,6 +107,8 @@ fun BubbleShooterApp(
                     },
                     onSwapClicked = { viewModel.swapBubbles() },
                     onPowerUpClicked = { type -> viewModel.activatePowerUp(type) },
+                    onBackgroundModeChanged = { mode -> viewModel.setBackgroundMode(mode) },
+                    onCustomPhotoSelected = { path -> viewModel.setCustomPhoto(path) },
                     onPauseClicked = { viewModel.pauseGame() },
                     onResumeClicked = { viewModel.resumeGame() },
                     onRestartClicked = { viewModel.restartCurrentLevel() },

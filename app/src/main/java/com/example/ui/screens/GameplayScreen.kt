@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,36 +8,38 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
+import com.example.model.BackgroundMode
 import com.example.model.GameStatus
 import com.example.model.GameUiState
 import com.example.model.PowerUpType
-import com.example.model.ScreenState
+import com.example.ui.components.BackgroundSelectorDialog
 import com.example.ui.components.BubbleCanvasRenderer
 import com.example.ui.components.DefeatOverlay
+import com.example.ui.components.GameBackground
 import com.example.ui.components.LauncherControls
 import com.example.ui.components.PauseOverlay
 import com.example.ui.components.StarRatingBar
@@ -51,6 +52,8 @@ fun GameplayScreen(
     onCanvasSizeChanged: (width: Float, height: Float) -> Unit,
     onSwapClicked: () -> Unit,
     onPowerUpClicked: (PowerUpType) -> Unit,
+    onBackgroundModeChanged: (BackgroundMode) -> Unit,
+    onCustomPhotoSelected: (String?) -> Unit,
     onPauseClicked: () -> Unit,
     onResumeClicked: () -> Unit,
     onRestartClicked: () -> Unit,
@@ -58,30 +61,16 @@ fun GameplayScreen(
     onMainMenuClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showBackgroundDialog by remember { mutableStateOf(false) }
+
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // Candy Background Image
-        Image(
-            painter = painterResource(id = R.drawable.img_sweet_background),
-            contentDescription = "Gameplay Background",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Scrim for optimal bubble contrast & aiming visibility
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xEE0B1020),
-                            Color(0xD910162F),
-                            Color(0xF2090D1A)
-                        )
-                    )
-                )
+        // Dynamic Game Background: Sweet Candy, Custom Photo from Gallery/Camera, or Live Camera AR
+        GameBackground(
+            backgroundMode = uiState.backgroundMode,
+            customPhotoPath = uiState.customPhotoPath,
+            scrimAlpha = 0.58f
         )
 
         Column(
@@ -96,24 +85,28 @@ fun GameplayScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Level ID & Name
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "LEVEL ${uiState.currentLevel?.id ?: 1}",
-                        fontSize = 12.sp,
+                        text = "LEVEL ${uiState.currentLevel?.id ?: 1} / 1000",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFF38BDF8),
                         letterSpacing = 1.sp
                     )
                     Text(
                         text = uiState.currentLevel?.name ?: "Arcade",
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        maxLines = 1
                     )
                 }
 
                 // Score Display
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) {
                     Text(
                         text = "SCORE",
                         fontSize = 10.sp,
@@ -122,28 +115,46 @@ fun GameplayScreen(
                     )
                     Text(
                         text = "${uiState.score}",
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
                     )
                 }
 
-                // Star Rating Progress & Pause Button
+                // Top Actions: Star Rating, Background Switcher, Pause
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     StarRatingBar(
                         score = uiState.score,
                         stars = uiState.stars,
                         level = uiState.currentLevel,
-                        modifier = Modifier.width(80.dp)
+                        modifier = Modifier.width(68.dp)
                     )
 
+                    // Quick Background Switcher Button (Photo / Camera / Themes)
+                    IconButton(
+                        onClick = { showBackgroundDialog = true },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1E293B))
+                            .testTag("gameplay_background_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Change Background",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Pause Button
                     IconButton(
                         onClick = onPauseClicked,
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF1E293B))
                             .testTag("pause_button")
@@ -151,7 +162,8 @@ fun GameplayScreen(
                         Icon(
                             imageVector = Icons.Default.Pause,
                             contentDescription = "Pause",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -180,6 +192,17 @@ fun GameplayScreen(
                 onSwapClicked = onSwapClicked,
                 onPowerUpClicked = onPowerUpClicked,
                 modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
+
+        // Quick Background Switcher Dialog
+        if (showBackgroundDialog) {
+            BackgroundSelectorDialog(
+                currentMode = uiState.backgroundMode,
+                customPhotoPath = uiState.customPhotoPath,
+                onModeSelected = onBackgroundModeChanged,
+                onPhotoSelected = onCustomPhotoSelected,
+                onDismiss = { showBackgroundDialog = false }
             )
         }
 
